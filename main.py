@@ -13,8 +13,8 @@ import aiohttp
 
 
 """ TODO
-На получение и запись 10 страниц уйдёт ~21.25 секунд
-На получение и запись 917 страниц уйдёт ~12109.27 секунд = ~201.82 минут = ~3.36 часа
+На получение и запись 10 страниц уйдёт ~ секунд
+На получение и запись 917 страниц уйдёт ~ секунд = ~ минут = ~ часа
 
 1̶.̶ ̶У̶б̶р̶а̶т̶ь̶ ̶\\̶x̶a̶0̶ ̶в̶ ̶о̶п̶и̶с̶а̶н̶и̶я̶х̶
 2̶.̶ ̶С̶д̶е̶л̶а̶т̶ь̶ ̶н̶о̶р̶м̶а̶л̶ь̶н̶у̶ю̶ ̶п̶а̶г̶и̶н̶а̶ц̶и̶ю̶ ̶с̶т̶р̶а̶н̶и̶ц̶
@@ -45,9 +45,9 @@ async def get_page_data(client, page, pagination_count):
         'User-Agent': user,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-en,ru;q=0.8,en-us;q=0.5,en;q=0.3',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-        'DNT': '1'
+        'Connection': 'close',
+        'Accept-Language': 'ru',
+        'Accept-Encoding': 'gzip'
     }
     url = f'https://q.ixfilm.org/page/{page}/'
 
@@ -63,13 +63,11 @@ async def get_page_data(client, page, pagination_count):
             urls = link.get('href')
             list_urls.append(urls)
 
-        # time.sleep(randrange(1, 3))
         print(f"[+] Page {page}/{pagination_count}")
 
         urls_count = len(list_urls)
 
         for url in enumerate(list_urls):
-            # time.sleep(randrange(2, 5))
             try:
                 response = await client.get(url=url[1], headers=header)
                 bs = BeautifulSoup(await response.text(), 'html.parser')
@@ -80,7 +78,8 @@ async def get_page_data(client, page, pagination_count):
                     name_film = bs.find(
                         'div', class_='fleft-desc').find('h1').text.strip()
                     name_film = name_film[:-16]
-                    poster = bs.find('div', class_='fleft').find(
+                    poster = bs.find(
+                        'div', class_='fleft').find(
                         'div', class_='img-wide').find('img').get('src')
                     descriprion = bs.find(
                         'div',
@@ -97,7 +96,6 @@ async def get_page_data(client, page, pagination_count):
                     rates_kp = bs.find('div', class_='frate-kp').text.strip()
                     rates_imdb = bs.find(
                         'div', class_='frate-imdb').text.strip()
-                    print(f"[+] Page {page}/{pagination_count}")
                     result_data.append(
                         {
                             'poster': poster,
@@ -113,16 +111,10 @@ async def get_page_data(client, page, pagination_count):
                             }
                         }
                     )
-                # print(f'[+] Film {url[0] + 1}/{urls_count}')
-
-                # async for i in tqdm(range(len(result_data))):
-                #     if i == True:
-                #         continue
 
             except BaseException as ex:
                 print(f"Ошибка: {ex}")
 
-            # finally:
         with open('result.json', 'w', encoding="utf-8") as file:
             json.dump(result_data, file, indent=4, ensure_ascii=False)
 
@@ -135,10 +127,10 @@ async def gather_data():
     header = {
         'User-Agent': user,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ru-ru,ru;q=0.8,en-us;q=0.5,en;q=0.3',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-        'DNT': '1'
+        'Accept-Language': 'en-en,ru;q=0.8,en-us;q=0.5,en;q=0.3',
+        'Connection': 'close',
+        'Accept-Language': 'ru',
+        'Accept-Encoding': 'gzip'
     }
     url = 'https://q.ixfilm.org/'
     connector = aiohttp.TCPConnector(limit=35)
@@ -151,14 +143,15 @@ async def gather_data():
 
         tasks = []
 
-        # for page in range(1, 3):
+        # for page in range(1, 6):
         for page in range(1, pagination_count + 1):
             task = asyncio.create_task(
                 get_page_data(
-                    client, page, pagination_count))
+                    client,
+                    page,
+                    pagination_count))
             tasks.append(task)
             await asyncio.sleep(1)
-
         await asyncio.gather(*tasks)
 
 
